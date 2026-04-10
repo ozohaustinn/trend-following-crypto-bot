@@ -283,18 +283,18 @@ class BotRunner:
             min_delta=bot_config.MIN_REBALANCE_DELTA,
         )
 
-        # ---- Step 4b: Account equity ------------------------------------
+        # ---- Step 6a: Fetch account equity --------------------------------
         try:
             account_equity = self.exchange.get_account_equity()
         except Exception as exc:  # noqa: BLE001
             account_equity = 0.0
             errors.append(f"Equity fetch failed: {exc}")
 
-        # ---- Step 5b: Last prices ----------------------------------------
+        # ---- Step 6b: Fetch last prices -----------------------------------
         all_candidate_symbols = list(set(universe) | set(current_weights))
         prices = self._get_last_prices(all_candidate_symbols, all_data)
 
-        # ---- Step 6 + 7: Risk checks & order execution ------------------
+        # ---- Step 7: Risk checks & order execution -----------------------
         orders_placed: list[dict] = []
         risk_summary = {
             "max_position_exceeded": False,
@@ -384,7 +384,7 @@ class BotRunner:
             except Exception as exc:  # noqa: BLE001
                 errors.append(f"Fill verification failed: {exc}")
 
-        # ---- Step 9: Build signals summary for log ----------------------
+        # ---- Step 9: Build signals summary and log run data ---------------
         all_log_symbols = set(universe) | set(current_weights)
         signals_log: dict[str, dict] = {}
         for sym in all_log_symbols:
@@ -413,10 +413,10 @@ class BotRunner:
             "errors": errors,
         }
 
-        # ---- Step 9: Log everything --------------------------------------
+        # ---- Step 10: Write log file -------------------------------------
         self.logger.log_run(run_data)
 
-        # ---- Step 10: Notify (optional) ---------------------------------
+        # ---- Step 11: Notify (optional) ----------------------------------
         try:
             summary = format_daily_summary(run_data)
             send_telegram(summary)
