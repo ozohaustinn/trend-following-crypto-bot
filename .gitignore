@@ -41,3 +41,7 @@ data/cache/
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Live trading bot
+logs/
+.env
