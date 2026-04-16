@@ -137,9 +137,9 @@ class BotRunner:
                 )
                 new_df["timestamp"] = pd.to_datetime(
                     new_df["timestamp"], unit="ms", utc=True
-                )
+                ).dt.tz_localize(None)
                 new_df = new_df.set_index("timestamp").sort_index()
-                new_df = new_df[new_df.index < pd.Timestamp(end, tz="UTC")]
+                new_df = new_df[new_df.index < pd.Timestamp(end)]
                 new_df.index = new_df.index.normalize()
 
                 if cached_df is not None and not cached_df.empty:
@@ -150,7 +150,7 @@ class BotRunner:
                     combined = new_df
 
                 # Trim to the required history window
-                cutoff_start = pd.Timestamp(start, tz="UTC")
+                cutoff_start = pd.Timestamp(start)
                 combined = combined[combined.index >= cutoff_start]
 
                 try:
@@ -302,6 +302,10 @@ class BotRunner:
             "equity_floor_breach": False,
         }
 
+        projected_weights = dict(current_weights)
+        for o in order_deltas:
+            projected_weights[o["symbol"]] = projected_weights.get(o["symbol],0.0) + o["delta_weight"]
+
         for order in order_deltas:
             symbol = order["symbol"]
             delta = order["delta_weight"]
@@ -309,11 +313,6 @@ class BotRunner:
             new_weight = current_w + delta
             price = prices.get(symbol, 1.0)
             order_value = abs(delta) * account_equity
-
-            # Build the projected weights map for total-leverage check
-            projected_weights = dict(current_weights)
-            for sym, d in [(o["symbol"], o["delta_weight"]) for o in order_deltas]:
-                projected_weights[sym] = projected_weights.get(sym, 0.0) + d
 
             approved, reason = run_all_checks(
                 symbol=symbol,
